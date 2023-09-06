@@ -1,0 +1,134 @@
+---
+title: "Kyoto Restoranları Değerlendirme"
+author: "zeynep"
+date: "2023-08-31"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::include_graphics("byodo-in-temple.png")
+kyoto <- read.csv("Kyoto_Restaurant_Info.csv")
+```
+
+## Kyoto Restoranları
+
+Kaggle'dan Kyoto'daki restoranları çeşitli bilgilerinin bulunduğu bir veri seti çektim. Bu veri setinde restoranları sunduğu yemek çeşitleri, değerlendirmeleri, ortalama yemek fiyatları vb. bilgiler bulunuyor, bu bilgileri yorumlamak amacıyla verilerde görselleştirme yaparak bu sunumu hazırladım.
+
+## Hazırlanan Grafikler
+
+- Kyoto Akşam Restoran Fiyatları
+- Kyoto Öğlen Restoran Fiyatları
+- En yüksek puanlı restoranlar
+- En çok hangi istasyonda restoran var?
+- Basit bir korelasyon
+- Akşam yemeği için hangi bölgeye gitmelisiniz?
+- En Çok Tercih Edilen Yemekler
+- Akşam ve Öğlen Yemekleri Fiyat Karşılaştırma
+
+
+
+
+## Kyoto Akşam Restoran Fiyatları
+```{r fiyataksam, echo = F, results= TRUE, warning=FALSE, message=FALSE}
+
+barplot(prop.table(table(kyoto$DinnerPrice)), xlab= '', ylab= "Fiyatların Sıklık Oranı",axisnames= TRUE,las=2, col= "firebrick",cex.names= 0.45 , axes= FALSE,border= NA, main= "Kyoto Restoran Fiyatları")
+title(xlab = "Ortalama Akşam Yemeği Fiyatları", line = 4.2)
+
+```
+
+
+## Kyoto Öğlen Restoran Fiyatları
+
+```{r fiyatsabah, echo = F, results= TRUE, warning=FALSE, message=FALSE}
+
+barplot(prop.table(table(kyoto$LunchPrice)), xlab= '', ylab= "Fiyatların Sıklık Oranı",axisnames= TRUE, las=2, col= "firebrick4", cex.names= 0.45, axes= FALSE, border= NA, main= "Kyoto Restoran Fiyatları")
+title(xlab = "Ortalama Öğlen Yemeği Fiyatları", line = 4.2)
+```
+
+## En yüksek puanlı restoranlar
+```{r yanbar, results= TRUE, warning=FALSE, message=FALSE}
+totalrating.or <- kyoto[order(kyoto$TotalRating), ]
+total.rating.or.lim <- tail(totalrating.or,10)
+library(ggplot2)
+x <- ggplot(total.rating.or.lim, aes(x=reorder(Name,TotalRating), y=TotalRating)) +
+     geom_bar(stat = "identity", fill="firebrick") +
+     coord_flip()
+x + labs(title="Restoran Sıralaması",
+        x ="Restoran", y = "Puan")
+```
+
+
+## En çok hangi istasyonda restoran var?
+
+```{r treemap, results= TRUE, warning=FALSE, message=FALSE}
+library(treemap)
+stationfreq <- as.data.frame(prop.table(table(kyoto$Station)))
+treemap(stationfreq, index = "Var1", vSize = "Freq", title="İstasyonlardaki Restoran Sayıları")
+
+```
+
+
+## Basit bir korelasyon
+
+```{r cor, results= TRUE, warning=FALSE, message=FALSE}
+library(tidyverse)
+kyotoson <- drop_na(kyoto)
+KOR<-cor(kyotoson[9:12])
+corrplot::corrplot(KOR)
+
+```
+
+
+## Akşam yemeği için hangi bölgeye gitmelisiniz?
+
+```{r bar, results= TRUE, warning=FALSE, message=FALSE}
+library(dplyr)
+bolgepuanaksam <- kyoto %>% group_by(Station) %>% summarize(value=mean(DinnerRating))
+bolgepuanaksam.or <- bolgepuanaksam[order(bolgepuanaksam$value), ]
+ilkonbolgepuanaksam2 <- tail(bolgepuanaksam.or, 10)
+dotchart(ilkonbolgepuanaksam2$value, labels = ilkonbolgepuanaksam2$Station,cex = 0.8, col= "firebrick",pch=19, xlab = "Puan")
+
+```
+
+## En Çok Tercih Edilen Yemekler
+
+```{r wordcloud, results= TRUE, warning=FALSE, message=FALSE}
+library(ggwordcloud)
+x <- as.data.frame(table(kyoto$FirstCategory))
+x.or <- x[order(x$Freq),]
+x.or.lim <- tail(x.or,20)
+rev.lim <- head(kyoto$ReviewNum,20)
+set.seed(1)
+ggplot(x.or.lim, aes(label = Var1, size = Freq, color = rev.lim))+
+geom_text_wordcloud()+
+scale_size_area(max_size = 15)+
+scale_color_gradient(low = "darkred", high = "red")+
+theme_minimal()
+
+```
+
+
+## Akşam ve Öğlen Yemekleri Fiyat Karşılaştırma
+
+```{r area, results= TRUE, warning=FALSE, message=FALSE}
+Var1 <- c("～￥999", "￥1000～￥1999", "￥10000～￥14999", "￥15000～￥19999", "￥2000～￥2999", "￥3000～￥3999", "￥4000～￥4999", "￥5000～￥5999", "￥6000～￥7999", "￥8000～￥9999")
+FreqDinner <- c(0.026815642,0.058100559,0.042458101,0.005586592,0.145251397,0.351955307,0.173184358,0.087150838,0.053631285,0.045810056)
+FreqLunch<- c(0.285123967,0.353305785,0.012396694,0.004132231,0.138429752,0.107438017,0.039256198,0.035123967,0.014462810,0.010330579)
+nihai <- data.frame(Var1, FreqDinner,FreqLunch)
+plot(nihai$FreqDinner, col=rgb(248,56,25, maxColorValue = 255), type="l", lwd=3, xlab="", ylab="", pch=20, xaxt="n")
+axis(1, at=1:10, labels=nihai$Var1, cex.axis=0.5, las=2)
+par(new=TRUE)
+plot(nihai$FreqLunch, col=rgb(24,105,109, maxColorValue = 255), type="l", lwd=3, xlab="", ylab="", pch=20, xaxt="n")
+axis(1, at=1:10, labels=nihai$Var1, cex.axis=0.5, las=2)
+polygon(c(1,1:10,10),y=c(0,nihai$FreqDinner,0), col=rgb(248,56,25, maxColorValue = 255, alpha = 60), border=F)
+polygon(c(1,1:10,10),y=c(0,nihai$FreqLunch,0), col=rgb(24,105,109, maxColorValue = 255, alpha = 60), border=F)
+
+
+
+```
+
+## Kaynakça
+
+- https://www.kaggle.com/datasets/koki25ando/tabelog-restaurant-review-dataset
+
